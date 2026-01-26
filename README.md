@@ -233,7 +233,6 @@ I initially fit a single global Gaussian to all historical data. The problem: th
 
 ```bash
 # Clone and setup
-cd flask_volatility_detector
 pip install -r requirements.txt
 
 # Run the server
