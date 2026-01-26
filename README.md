@@ -17,6 +17,12 @@ This got me thinking: what if we modeled market behavior as a joint distribution
 That's exactly what this project does.
 
 ---
+<img width="1897" height="2245" alt="Image" src="https://github.com/user-attachments/assets/927679b1-82a0-47e6-978a-a91db940b362" />
+<img width="1897" height="1057" alt="Image" src="https://github.com/user-attachments/assets/af73e1b7-5fa0-43b9-a975-825583c685fe" />
+<img width="1897" height="1057" alt="Image" src="https://github.com/user-attachments/assets/b08134fd-003d-4387-a3b2-93a146bd9ce3" />
+<img width="1897" height="4749" alt="Image" src="https://github.com/user-attachments/assets/ed8e668c-8503-460b-accd-ea5f480dcf4a" />
+
+---
 
 ## How the Model Works
 
