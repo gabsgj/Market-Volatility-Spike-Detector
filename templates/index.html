@@ -1,0 +1,399 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Market Volatility Spike Detector{% endblock %}
+
+{% block content %}
+<section class="dashboard">
+    <div class="card intro-card">
+        <h2><span class="material-icons">analytics</span> Project Overview</h2>
+        <div class="intro-content">
+            <p>
+                Traditional volatility indicators like VIX treat each data point independently. But market stress
+                rarely manifests in just one dimension—during COVID crash (March 2020), we saw <strong>simultaneous
+                    spikes</strong> in volatility, unusual volume, and correlation breakdowns.
+            </p>
+            <div class="key-insight">
+                <span class="material-icons">psychology</span>
+                <div>
+                    <strong>Core Hypothesis:</strong> By modeling market behavior as a joint distribution across
+                    multiple features, we can detect statistically anomalous states that single-feature indicators miss.
+                </div>
+            </div>
+            <p class="distinction">
+                <span class="material-icons">compare_arrows</span>
+                <span>This is <strong>probabilistic anomaly detection</strong>—we measure how "unlikely" each day's
+                    observation is under the learned distribution.</span>
+            </p>
+
+            <div class="tech-stack">
+                <span class="tech-badge"><span class="material-icons">code</span> Flask</span>
+                <span class="tech-badge"><span class="material-icons">functions</span> NumPy</span>
+                <span class="tech-badge"><span class="material-icons">bar_chart</span> Chart.js</span>
+                <span class="tech-badge"><span class="material-icons">savings</span> yfinance</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card method-card">
+        <h2><span class="material-icons">science</span> Statistical Methodology</h2>
+        <div class="method-grid">
+            <div class="method-item">
+                <div class="method-header">
+                    <h3>Feature Engineering</h3>
+                    <span class="info-icon"
+                        data-tooltip="Raw price data is transformed into statistically meaningful features. This follows standard quantitative finance practices (Bollerslev 1986, Cont 2001).">
+                        <span class="material-icons">info</span>
+                    </span>
+                </div>
+                <p class="feature-intro">Four features capture market dynamics:</p>
+                <ul>
+                    <li>
+                        <strong>Log Return</strong>
+                        <span class="info-icon small"
+                            data-tooltip="r_t = log(P_t/P_{t-1}). Preferred over simple returns for additivity and approximate normality.">
+                            <span class="material-icons">help_outline</span>
+                        </span>
+                    </li>
+                    <li>
+                        <strong>Rolling σ (14d)</strong>
+                        <span class="info-icon small"
+                            data-tooltip="14-day rolling standard deviation of returns. Captures volatility clustering.">
+                            <span class="material-icons">help_outline</span>
+                        </span>
+                    </li>
+                    <li>
+                        <strong>Volume Δ</strong>
+                        <span class="info-icon small"
+                            data-tooltip="log(V_t/V_{t-1}). Unusual volume often precedes major price moves.">
+                            <span class="material-icons">help_outline</span>
+                        </span>
+                    </li>
+                    <li>
+                        <strong>|Return|</strong>
+                        <span class="info-icon small"
+                            data-tooltip="Absolute log return. Captures movement magnitude regardless of direction.">
+                            <span class="material-icons">help_outline</span>
+                        </span>
+                    </li>
+                </ul>
+            </div>
+            <div class="method-item">
+                <div class="method-header">
+                    <h3>Multivariate Gaussian</h3>
+                    <span class="info-icon"
+                        data-tooltip="Rolling MLE estimation from 60-day trailing window. Adapts to non-stationary market dynamics.">
+                        <span class="material-icons">info</span>
+                    </span>
+                </div>
+                <p>Market state modeled as:</p>
+                <p class="formula">x<sub>t</sub> ~ N(μ̂<sub>t</sub>, Σ̂<sub>t</sub>)</p>
+                <p class="method-detail">
+                    Parameters estimated via <strong>Maximum Likelihood</strong> from trailing 60 trading days.
+                    Regularization (εI) ensures positive definiteness.
+                </p>
+            </div>
+            <div class="method-item">
+                <div class="method-header">
+                    <h3>Mahalanobis Distance</h3>
+                    <span class="info-icon"
+                        data-tooltip="P.C. Mahalanobis (1936). Accounts for feature correlations and different scales—unlike Euclidean distance.">
+                        <span class="material-icons">info</span>
+                    </span>
+                </div>
+                <p>Anomaly score via generalized distance:</p>
+                <p class="formula">D² = (x-μ)ᵀ Σ⁻¹ (x-μ)</p>
+                <p class="method-detail">
+                    Under H₀, D² ~ χ²(4). This provides a principled threshold framework.
+                </p>
+            </div>
+            <div class="method-item">
+                <div class="method-header">
+                    <h3>Detection Criterion</h3>
+                    <span class="info-icon"
+                        data-tooltip="99.5th percentile threshold flags only the most extreme 0.5% of observations—true statistical outliers.">
+                        <span class="material-icons">info</span>
+                    </span>
+                </div>
+                <p>Anomaly flagged when:</p>
+                <p class="formula">D²<sub>t</sub> > Q<sub>0.995</sub>(D²)</p>
+                <p class="method-detail">
+                    Percentile-based threshold is robust to fat tails in return distributions.
+                </p>
+            </div>
+        </div>
+        <div class="academic-note">
+            <span class="material-icons">menu_book</span>
+            <div>
+                <strong>References:</strong> Mahalanobis (1936), Bollerslev (1986), Cont (2001), Andersen & Bollerslev
+                (1998).
+                Built on concepts from <strong>ML Specialization by Andrew Ng & DeepLearning.AI</strong>.
+            </div>
+        </div>
+    </div>
+
+    <div class="card control-card">
+        <h2><span class="material-icons">tune</span> Analysis Parameters</h2>
+        <form id="analysis-form">
+            <div class="form-group">
+                <label for="index-select">
+                    Market Index
+                    <span class="info-icon small"
+                        data-tooltip="SPY (S&P 500 ETF) recommended—highest liquidity and data quality.">
+                        <span class="material-icons">help_outline</span>
+                    </span>
+                </label>
+                <select id="index-select" name="index">
+                    {% for idx in indices %}
+                    <option value="{{ idx }}">{{ idx }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="period-select">
+                    Sample Period
+                    <span class="info-icon small"
+                        data-tooltip="Longer periods capture more market regimes. 5Y includes COVID crash, rate hikes, recent volatility.">
+                        <span class="material-icons">help_outline</span>
+                    </span>
+                </label>
+                <select id="period-select" name="period">
+                    <option value="1y">1 Year</option>
+                    <option value="2y" selected>2 Years</option>
+                    <option value="5y">5 Years (best for event matching)</option>
+                </select>
+            </div>
+
+            <div class="param-info">
+                <div class="param-row">
+                    <span>Rolling Window:</span>
+                    <strong>60 days</strong>
+                </div>
+                <div class="param-row">
+                    <span>Threshold:</span>
+                    <strong>99.5th percentile</strong>
+                </div>
+                <div class="param-row">
+                    <span>Features:</span>
+                    <strong>4-dimensional</strong>
+                </div>
+            </div>
+
+            <button type="submit" id="analyze-btn">
+                <span class="material-icons">play_arrow</span> Run Detection
+            </button>
+
+            <p class="form-note">
+                <span class="material-icons" style="font-size: 14px; vertical-align: middle;">info</span>
+                Event correlations match anomalies to known events (COVID, SVB, etc.)
+            </p>
+        </form>
+    </div>
+</section>
+
+<section class="results-section" id="results-section" style="display: none;">
+    <div class="results-header">
+        <h2><span class="material-icons">assessment</span> Detection Results</h2>
+        <p class="results-subtitle">Anomalies identified via Mahalanobis distance exceeding 99.5th percentile</p>
+        <div class="export-buttons" style="margin-top: 16px;">
+            <button type="button" class="export-btn" onclick="exportResults('csv')">
+                <span class="material-icons">download</span> Export CSV
+            </button>
+            <button type="button" class="export-btn" onclick="exportResults('json')">
+                <span class="material-icons">code</span> Export JSON
+            </button>
+        </div>
+    </div>
+
+    <div class="card chart-card">
+        <div class="card-header">
+            <h2><span class="material-icons">show_chart</span> Price Series with Anomaly Markers</h2>
+            <span class="info-icon"
+                data-tooltip="Red markers indicate trading days where D² exceeded the 99.5th percentile threshold.">
+                <span class="material-icons">info</span>
+            </span>
+        </div>
+        <div class="chart-container">
+            <canvas id="price-chart"></canvas>
+        </div>
+    </div>
+
+    <div class="card chart-card">
+        <div class="card-header">
+            <h2><span class="material-icons">insights</span> Mahalanobis Distance Time Series</h2>
+            <span class="info-icon"
+                data-tooltip="D² values over time. Dashed line = threshold. Bars exceeding threshold are flagged as anomalies.">
+                <span class="material-icons">info</span>
+            </span>
+        </div>
+        <div class="chart-container">
+            <canvas id="distance-chart"></canvas>
+        </div>
+    </div>
+
+    <div class="card stats-card">
+        <div class="card-header">
+            <h2><span class="material-icons">query_stats</span> Summary Statistics</h2>
+            <span class="info-icon"
+                data-tooltip="Detection metrics. Anomaly rate should approximate α ≈ 0.5% for well-calibrated detector.">
+                <span class="material-icons">info</span>
+            </span>
+        </div>
+        <div class="stats-grid" id="stats-grid">
+        </div>
+    </div>
+
+    <div class="card event-card">
+        <div class="card-header">
+            <h2><span class="material-icons">event_note</span> Event Correlations</h2>
+            <span class="info-icon"
+                data-tooltip="Detected anomalies matched to documented market events (±5 day window). Validates detection accuracy.">
+                <span class="material-icons">info</span>
+            </span>
+        </div>
+        <div class="event-list" id="event-list">
+        </div>
+    </div>
+
+    <div class="card anomaly-card">
+        <div class="card-header">
+            <h2><span class="material-icons">warning_amber</span> All Flagged Dates</h2>
+            <span class="info-icon"
+                data-tooltip="Complete list of dates where D² exceeded threshold. Each is a statistically anomalous market state.">
+                <span class="material-icons">info</span>
+            </span>
+        </div>
+        <div class="anomaly-list" id="anomaly-list">
+        </div>
+    </div>
+</section>
+
+<div class="loading-overlay" id="loading" style="display: none;">
+    <div class="spinner"></div>
+    <p>Estimating rolling μ and Σ, computing distances...</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentAnalysisData = null;
+
+    document.querySelectorAll('.info-icon').forEach(icon => {
+        icon.addEventListener('mouseenter', showTooltip);
+        icon.addEventListener('mouseleave', hideTooltip);
+        icon.addEventListener('click', toggleTooltip);
+    });
+
+    function showTooltip(e) {
+        const tooltip = document.createElement('div');
+        tooltip.className = 'tooltip';
+        tooltip.textContent = e.currentTarget.dataset.tooltip;
+        document.body.appendChild(tooltip);
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        tooltip.style.top = (rect.top - tooltip.offsetHeight - 8) + 'px';
+        tooltip.style.left = (rect.left + rect.width / 2 - tooltip.offsetWidth / 2) + 'px';
+
+        e.currentTarget._tooltip = tooltip;
+    }
+
+    function hideTooltip(e) {
+        if (e.currentTarget._tooltip) {
+            e.currentTarget._tooltip.remove();
+            e.currentTarget._tooltip = null;
+        }
+    }
+
+    function toggleTooltip(e) {
+        if (e.currentTarget._tooltip) {
+            hideTooltip(e);
+        } else {
+            showTooltip(e);
+        }
+    }
+
+    async function exportResults(format) {
+        if (!currentAnalysisData) {
+            alert('No analysis data to export. Run detection first.');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/export/' + format, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(currentAnalysisData)
+            });
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'anomaly_detection_' + new Date().toISOString().split('T')[0] + '.' + format;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+        } catch (error) {
+            alert('Export failed: ' + error.message);
+        }
+    }
+
+    function renderEventCorrelations(data) {
+        const eventList = document.getElementById('event-list');
+        if (!eventList) return;
+
+        if (!data.event_correlations || data.event_correlations.length === 0) {
+            eventList.innerHTML = '<p class="no-events">No matching events in this period. Try <strong>5 Years</strong> for more historical coverage.</p>';
+            return;
+        }
+
+        eventList.innerHTML = data.event_correlations.map(evt => `
+            <div class="event-item ${evt.match_type}">
+                <span class="event-name">${evt.event}</span>
+                <span class="event-date">${evt.event_date}</span>
+                <span class="event-match">${evt.match_type === 'exact' ? '✓ Exact' : '≈ ±' + evt.days_difference + 'd'}</span>
+            </div>
+        `).join('');
+    }
+
+    document.getElementById('analysis-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        document.getElementById('loading').style.display = 'flex';
+        document.getElementById('results-section').style.display = 'none';
+
+        const formData = new FormData(this);
+
+        try {
+            const response = await fetch('/analyze', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                alert('Error: ' + data.error);
+                return;
+            }
+
+            currentAnalysisData = data;
+
+            renderPriceChart(data);
+            renderDistanceChart(data);
+            renderStats(data);
+            renderEventCorrelations(data);
+            renderAnomalyList(data);
+
+            document.getElementById('results-section').style.display = 'block';
+            document.getElementById('results-section').scrollIntoView({ behavior: 'smooth' });
+
+        } catch (error) {
+            alert('Error analyzing data: ' + error.message);
+        } finally {
+            document.getElementById('loading').style.display = 'none';
+        }
+    });
+</script>
+{% endblock %}

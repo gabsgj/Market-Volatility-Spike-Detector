@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Results - {{ index_name }} Analysis{% endblock %}
+
+{% block content %}
+<section class="results-page">
+    <div class="page-header">
+        <a href="/" class="back-link"><span class="material-icons">arrow_back</span> Back to Dashboard</a>
+        <h2>{{ index_name }} Anomaly Detection Results</h2>
+        <p class="page-subtitle">Rolling 60-day Mahalanobis distance analysis with 99.5th percentile threshold</p>
+    </div>
+
+    <div class="card chart-card">
+        <div class="card-header">
+            <h2><span class="material-icons">candlestick_chart</span> Price Series with Anomaly Markers</h2>
+            <span class="info-icon"
+                data-tooltip="Red markers indicate trading days where the multivariate market state exceeded the 99.5th percentile Mahalanobis distance threshold.">
+                <span class="material-icons">info</span>
+            </span>
+        </div>
+        <div class="chart-container">
+            <canvas id="price-chart"></canvas>
+        </div>
+    </div>
+
+    <div class="card chart-card">
+        <div class="card-header">
+            <h2><span class="material-icons">stacked_line_chart</span> Mahalanobis Distance Over Time</h2>
+            <span class="info-icon"
+                data-tooltip="Each bar represents the statistical distance of that day's market features from the rolling 60-day baseline. The dashed line is the detection threshold.">
+                <span class="material-icons">info</span>
+            </span>
+        </div>
+        <div class="chart-container">
+            <canvas id="distance-chart"></canvas>
+        </div>
+    </div>
+
+    <div class="card feature-card">
+        <div class="card-header">
+            <h2><span class="material-icons">auto_graph</span> Feature Time Series</h2>
+            <span class="info-icon"
+                data-tooltip="Individual feature components that form the multivariate input to the Gaussian model. Spikes in these often correspond to detected anomalies.">
+                <span class="material-icons">info</span>
+            </span>
+        </div>
+        <div class="feature-charts">
+            <div class="feature-chart-container">
+                <canvas id="volatility-chart"></canvas>
+            </div>
+            <div class="feature-chart-container">
+                <canvas id="volume-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="card stats-card">
+        <div class="card-header">
+            <h2><span class="material-icons">query_stats</span> Detection Summary</h2>
+            <span class="info-icon"
+                data-tooltip="Key metrics from the analysis. Well-calibrated detection typically yields 0.5-2% anomaly rate.">
+                <span class="material-icons">info</span>
+            </span>
+        </div>
+        <div class="stats-grid" id="stats-grid">
+            <div class="stat-item">
+                <span class="stat-label">Trading Days</span>
+                <span class="stat-value" id="total-days">--</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Anomalies</span>
+                <span class="stat-value anomaly-count" id="anomaly-count">--</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Detection Rate</span>
+                <span class="stat-value" id="anomaly-rate">--</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Threshold (D)</span>
+                <span class="stat-value" id="threshold-value">--</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card anomaly-card">
+        <div class="card-header">
+            <h2><span class="material-icons">notification_important</span> Flagged Trading Days</h2>
+            <span class="info-icon"
+                data-tooltip="Cross-reference these dates with market news to validate detection quality. Known events (earnings, Fed announcements, geopolitical) often align.">
+                <span class="material-icons">info</span>
+            </span>
+        </div>
+        <div class="anomaly-list" id="anomaly-list">
+            <p class="loading-text">Analyzing...</p>
+        </div>
+    </div>
+
+    <div class="card interpretation-card">
+        <div class="card-header">
+            <h2><span class="material-icons">psychology</span> Interpretation Guide</h2>
+        </div>
+        <div class="interpretation-content">
+            <div class="interpretation-item">
+                <h4>High Distance + Negative Return</h4>
+                <p>Potential crash signal. Market stress materializing as downward pressure.</p>
+            </div>
+            <div class="interpretation-item">
+                <h4>High Distance + Positive Return</h4>
+                <p>Relief rally or short squeeze. Unusual upward movement, potentially unstable.</p>
+            </div>
+            <div class="interpretation-item">
+                <h4>Clustered Anomalies</h4>
+                <p>Regime change in progress. Multiple consecutive flags suggest sustained stress.</p>
+            </div>
+            <div class="interpretation-item">
+                <h4>Isolated Anomaly</h4>
+                <p>Event-driven spike. Often corresponds to earnings, announcements, or one-off news.</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Initialize tooltips
+    document.querySelectorAll('.info-icon').forEach(icon => {
+        icon.addEventListener('mouseenter', showTooltip);
+        icon.addEventListener('mouseleave', hideTooltip);
+        icon.addEventListener('click', toggleTooltip);
+    });
+
+    function showTooltip(e) {
+        const tooltip = document.createElement('div');
+        tooltip.className = 'tooltip';
+        tooltip.textContent = e.currentTarget.dataset.tooltip;
+        document.body.appendChild(tooltip);
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        tooltip.style.top = (rect.top - tooltip.offsetHeight - 8) + 'px';
+        tooltip.style.left = (rect.left + rect.width / 2 - tooltip.offsetWidth / 2) + 'px';
+
+        e.currentTarget._tooltip = tooltip;
+    }
+
+    function hideTooltip(e) {
+        if (e.currentTarget._tooltip) {
+            e.currentTarget._tooltip.remove();
+            e.currentTarget._tooltip = null;
+        }
+    }
+
+    function toggleTooltip(e) {
+        if (e.currentTarget._tooltip) {
+            hideTooltip(e);
+        } else {
+            showTooltip(e);
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', async function () {
+        const indexName = '{{ index_name }}';
+
+        const formData = new FormData();
+        formData.append('index', indexName);
+        formData.append('period', '2y');
+
+        try {
+            const response = await fetch('/analyze', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                alert('Error: ' + data.error);
+                return;
+            }
+
+            renderPriceChart(data);
+            renderDistanceChart(data);
+            renderFeatureCharts(data);
+
+            document.getElementById('total-days').textContent = data.dates.length;
+            document.getElementById('anomaly-count').textContent = data.anomaly_count;
+            document.getElementById('anomaly-rate').textContent =
+                ((data.anomaly_count / data.dates.length) * 100).toFixed(2) + '%';
+            document.getElementById('threshold-value').textContent = data.threshold.toFixed(2);
+
+            renderAnomalyList(data);
+
+        } catch (error) {
+            alert('Error loading results: ' + error.message);
+        }
+    });
+</script>
+{% endblock %}
