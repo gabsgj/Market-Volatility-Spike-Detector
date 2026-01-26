@@ -1,5 +1,9 @@
 # Market Volatility Spike Detector
 
+**🔴 Live Demo:** [marketvolatilityanomaly.gabrieljames.me](https://marketvolatilityanomaly.gabrieljames.me)
+
+**📁 GitHub:** [github.com/gabsgj/Market-Volatility-Spike-Detector](https://github.com/gabsgj/Market-Volatility-Spike-Detector)
+
 A statistical approach to detecting unusual market behavior using multivariate Gaussian density estimation and Mahalanobis distance scoring. This project was developed as part of my exploration into probabilistic machine learning methods for financial time series, building on concepts from the **Machine Learning Specialization by Andrew Ng and DeepLearning.AI**.
 
 ---
