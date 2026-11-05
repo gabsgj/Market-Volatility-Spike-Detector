@@ -1,6 +1,6 @@
 # Market Volatility Spike Detector
 
-**🔴 Live Demo:** [marketvolatilityanomaly.gabrieljames.me](https://marketvolatilityanomaly.gabrieljames.me)
+**🔴 Live Demo:** [marketvolatilityanomaly.gabrieljames.dev](https://marketvolatilityanomaly.gabrieljames.dev)
 
 **📁 GitHub:** [github.com/gabsgj/Market-Volatility-Spike-Detector](https://github.com/gabsgj/Market-Volatility-Spike-Detector)
 
